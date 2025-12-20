@@ -49,6 +49,34 @@
         /* LOGIN OVERLAY */
         #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(26, 35, 126, 0.95); z-index: 9999; display: flex; justify-content: center; align-items: center; }
         .login-box { background: white; padding: 40px; border-radius: 10px; width: 350px; text-align: center; }
+
+        /* Melebarkan area konten popup */
+        .leaflet-popup-content {
+            width: auto !important; /* Mengikuti lebar konten/tabel */
+            min-width: 350px;       /* Lebar minimal balon */
+            max-width: 600px;       /* Lebar maksimal balon */
+        }
+        /* Mempercantik Tabel Atribut */
+        .leaflet-popup-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        .leaflet-popup-content td,
+        .leaflet-popup-content th {
+            padding: 5px 8px;       /* Memberi jarak teks agar tidak mepet */
+            border-bottom: 1px solid #ddd;
+        }
+        .leaflet-popup-content tr:nth-child(even) {
+            background-color: #f9f9f9; /* Warna selang-seling baris */
+        }
+
+        /* Tambahkan ini di dalam tag <style> */
+        #map { 
+            width: 100%; 
+            height: 100%; 
+            background-color: #ffffff !important; /* Paksa latar belakang putih */
+        }
     </style>
 </head>
 <body>
@@ -229,11 +257,31 @@
         };
 
         function initMaps() {
-            // Peta Utama
-            map = L.map('map').setView([-6.1754, 106.8272], 11);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' }).addTo(map);
+            // 1. SETUP BASEMAPS (OSM & PUTIH)
+            
+            // Opsi A: OpenStreetMap
+            const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+                attribution: 'OSM' 
+            });
 
-            // Menambahkan Layer Control & WMS
+            // Opsi B: Layar Putih (Layer Kosong)
+            const whiteLayer = L.layerGroup(); // Ini hanya grup kosong, jadi transparan (terlihat background putih)
+
+            // Gabungkan jadi Menu Base Map
+            const baseMaps = {
+                "OpenStreetMap": osmLayer,
+                "Tanpa Peta (Putih)": whiteLayer
+            };
+
+            // 2. INISIALISASI PETA
+            // Tambahkan 'layers: [osmLayer]' agar default-nya OSM nyala
+            map = L.map('map', {
+                center: [-6.1754, 106.8272],
+                zoom: 11,
+                layers: [osmLayer] 
+            });
+
+            // 3. SETUP LAYER GEOSERVER (OVERLAYS)
             let overlayMaps = {};
             
             layersDB.forEach(l => {
@@ -245,32 +293,33 @@
                     attribution: l.instansi
                 });
 
-                // Tambahkan fitur GetFeatureInfo (Klik muncul atribut)
+                // Fitur Klik Info (GetFeatureInfo)
                 if(l.type.includes('Vektor') || l.type.includes('Point')) {
                     map.on('click', function(e) {
+                        // Hanya aktifkan klik info jika layer tersebut sedang NYALA di peta
                         if (map.hasLayer(wmsLayer)) {
                             getFeatureInfo(e, l.layerName);
                         }
                     });
                 }
 
-                // Kelompokkan untuk Layer Control
+                // Masukkan ke daftar Overlay
                 let label = `<b style="color:${getColor(l.instansi)}">[${l.instansi}]</b> ${l.name}`;
                 overlayMaps[label] = wmsLayer;
                 
-                // Simpan referensi
+                // Simpan referensi untuk analisis nanti
                 activeLayers[l.id] = wmsLayer;
             });
 
-            L.control.layers({"OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')}, overlayMaps, {collapsed: false}).addTo(map);
+            // 4. BUAT TOMBOL KONTROL LAYER
+            // Masukkan baseMaps (Radio Button) dan overlayMaps (Checkbox)
+            L.control.layers(baseMaps, overlayMaps, {collapsed: false}).addTo(map);
 
-            // Peta Analisis & Bbox (Init nanti saat tab dibuka biar render bener)
+            // 5. SETUP PETA LAIN (ANALISIS & BBOX)
             setTimeout(() => {
-                bboxMap = L.map('bbox-map', {zoomControl: false}).setView([-6.1754, 106.8272], 10);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(bboxMap);
-
-                analysisMap = L.map('analysis-map').setView([-6.1754, 106.8272], 11);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(analysisMap);
+                bboxMap = L.map('bbox-map', {zoomControl: false, layers: [L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')]}).setView([-6.1754, 106.8272], 10);
+                
+                analysisMap = L.map('analysis-map', {layers: [L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')]}).setView([-6.1754, 106.8272], 11);
             }, 1000);
         }
 
@@ -293,8 +342,10 @@
                             content += `<tr><td>${key}</td><td>${props[key]}</td></tr>`;
                         }
                         content += `</table><a href="#" onclick="switchView('metadata-view')" class="btn btn-xs btn-primary w-100">Lihat Metadata Lengkap</a></div>`;
-                        
-                        L.popup().setLatLng(e.latlng).setContent(content).openOn(map);
+
+                        // maxWidth: Lebar maksimal (biar tidak terlalu lebar di HP)
+                        // minWidth: Lebar minimal (biar tabel tidak tergencet)
+                        L.popup({ maxWidth: 600, minWidth: 400 }).setLatLng(e.latlng).setContent(content).openOn(map);
                     }
                 });
         }
