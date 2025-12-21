@@ -423,52 +423,52 @@
             const btn = document.querySelector('button[onclick="runRasterAnalysis()"]');
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses Zona Aman...';
 
-            // 1. Bersihkan peta analisis dulu
+            // 1. Bersihkan peta
             analysisMap.eachLayer((layer) => { 
                 if(layer instanceof L.TileLayer.WMS) analysisMap.removeLayer(layer); 
             });
 
-            // Simulasi loading biar terlihat canggih
             setTimeout(() => {
                 document.getElementById('raster-result').classList.remove('d-none');
                 
-                // --- TRIK "KUE LAPIS" (VISUAL HACK) ---
-                
-                // LAPIS 1 (Paling Bawah): Batas Jakarta (Dianggap Zona Aman/Hijau)
-                // Kita panggil layer batas kecamatan, tapi nanti kita anggap ini zona dasar
+                // --- TRIK "KUE LAPIS" ---
+
+                // LAPIS 1 (Paling Bawah): Batas Jakarta -> PAKAI STYLE HIJAU
                 if(activeLayers['batas_kecamatan']) {
-                    activeLayers['batas_kecamatan'].setParams({ styles: 'polygon' }); // Pastikan style polygon solid
+                    // KUNCINYA DI SINI: Kita ganti styles jadi 'zona_hijau' yang baru dibuat
+                    activeLayers['batas_kecamatan'].setParams({ styles: 'zona_hijau' }); 
+                    
                     activeLayers['batas_kecamatan'].addTo(analysisMap);
-                    activeLayers['batas_kecamatan'].bringToBack(); // Taruh paling bawah
+                    activeLayers['batas_kecamatan'].bringToBack(); 
                 }
 
-                // LAPIS 2 & 3 (Penutup): Banjir & Rawan
-                // Area ini akan menutupi warna hijau di bawahnya
-                
+                // LAPIS 2: Banjir (Warna Biru bawaan GeoServer)
                 if(document.getElementById('check-kejadian').checked) {
                     if(activeLayers['banjir_vec']) {
+                        // Kembalikan ke style default (bawaan layer)
+                        activeLayers['banjir_vec'].setParams({ styles: '' }); 
                         activeLayers['banjir_vec'].addTo(analysisMap);
-                        activeLayers['banjir_vec'].bringToFront(); // Taruh di atas
+                        activeLayers['banjir_vec'].bringToFront();
                     }
                 }
                 
+                // LAPIS 3: Rawan (Warna Merah/Oranye bawaan GeoServer)
                 if(document.getElementById('check-rawan').checked) {
                     if(activeLayers['rawan_vec']) {
+                        activeLayers['rawan_vec'].setParams({ styles: '' });
                         activeLayers['rawan_vec'].addTo(analysisMap);
-                        activeLayers['rawan_vec'].bringToFront(); // Taruh paling atas
+                        activeLayers['rawan_vec'].bringToFront();
                     }
                 }
 
-                // Update Teks Hasil
                 btn.innerHTML = '🧮 Cari Zona Aman';
                 
-                // Pesan Penjelasan untuk Dosen/User
-                const infoText = "Visualisasi Zona Aman: Area HIJAU adalah wilayah Jakarta yang TIDAK tertutup layer Banjir/Rawan.";
+                const infoText = "Area HIJAU adalah Zona Aman (Wilayah Jakarta yang tidak tertutup layer Banjir).";
                 document.querySelector('#raster-result p').innerText = infoText;
                 
-                alert("Analisis Selesai! \nArea Hijau yang terlihat adalah ZONA AMAN (Visual Overlay).");
+                alert("Analisis Selesai!");
 
-            }, 2000);
+            }, 1000);
         }
         // --- 5. SISTEM LOGIN (DENGAN PASSWORD) ---
         function login() {
