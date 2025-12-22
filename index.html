@@ -312,6 +312,26 @@
                 activeLayers[l.id] = wmsLayer;
             });
 
+            // 🔥🔥🔥 [PENAMBAHAN BARU] LAYER DARI GITHUB 🔥🔥🔥
+            // Ini Layer Peta Raster (Visual Cepat) yang Anda buat dari tiles
+            const githubRaster = L.tileLayer('https://faiz-karmani.github.io/petarasterids/{z}/{x}/{y}.png', {
+                tms: false,
+                attribution: '<b>Visualisasi GitHub</b> (Cepat)',
+                minZoom: 10,
+                maxZoom: 15,
+                opacity: 1, // Atur transparansi (1 = terlihat jelas, 0.7 = agak transparan)
+                zIndex: 500
+            });
+            
+            // Masukkan ke Menu Layer (Paling Atas agar terlihat jelas)
+            // Saya beri label tebal agar dosen lihat
+            overlayMaps["<b>[VISUAL]</b> Peta Raster Cepat (GitHub)"] = githubRaster;
+
+            // Langsung nyalakan layer ini saat pertama kali web dibuka (biar keren)
+            githubRaster.addTo(map);
+            // 🔥🔥🔥 [AKHIR PENAMBAHAN] 🔥🔥🔥
+
+
             // 4. BUAT TOMBOL KONTROL LAYER
             // Masukkan baseMaps (Radio Button) dan overlayMaps (Checkbox)
             L.control.layers(baseMaps, overlayMaps, {collapsed: false}).addTo(map);
